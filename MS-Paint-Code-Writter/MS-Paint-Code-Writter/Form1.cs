@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Newtonsoft.Json;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
@@ -19,13 +20,10 @@ namespace MS_Paint_Code_Writter
 
         private static readonly string _workdir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "MSPaintCodeWritter");
         private static readonly string _confdir = Path.Combine(_workdir, "config");
-        private static readonly string _savedConfdir = Path.Combine(_confdir, "configuration.txt");
-        private MyCursor zoomBtn { get; set; }
-        private MyCursor penBtn { get; set; }
-        private MyCursor colorPaleteBtn { get; set; }
-        private MyCursor RText { get; set; }
-        private MyCursor GText { get; set; }
-        private MyCursor BText { get; set; }
+        private static readonly string _savedConf = Path.Combine(_confdir, "configuration.txt");
+
+        public MyConfig CurrentConfig { get; set; } = new MyConfig();
+        private bool loadedConfig = false;
 
         public Form1()
         {
@@ -39,6 +37,10 @@ namespace MS_Paint_Code_Writter
         private const int MOUSEEVENTF_LEFTUP = 0x04;
         private const int MOUSEEVENTF_RIGHTDOWN = 0x08;
         private const int MOUSEEVENTF_RIGHTUP = 0x10;
+        //Keyboard actions
+        private const int VK_CONTROL = 0x11;
+        private const int VK_E = 0x45;
+
 
         [DllImport("user32.dll")]
         static extern IntPtr SetParent(IntPtr hwc, IntPtr hwp);
@@ -46,7 +48,8 @@ namespace MS_Paint_Code_Writter
         static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
         [DllImport("user32.dll", CharSet = CharSet.Auto, CallingConvention = CallingConvention.StdCall)]
         public static extern void mouse_event(uint dwFlags, uint dx, uint dy, uint cButtons, uint dwExtraInfo);
-
+        [DllImport("user32.dll")]
+        static extern bool SetForegroundWindow(IntPtr hWnd);
         public void ClickLeft(uint x, uint y)
         {
             mouse_event(MOUSEEVENTF_LEFTDOWN | MOUSEEVENTF_LEFTUP, x, y, 0, 0);
@@ -59,9 +62,18 @@ namespace MS_Paint_Code_Writter
                 Thread.Sleep(sleep);
             }
         }
-
+        public void CtrlE()
+        {
+            mouse_event( | MOUSEEVENTF_LEFTUP, x, y, 0, 0);
+            Thread.Sleep(sleep);
+        }
         private void button1_Click(object sender, EventArgs e)
         {
+            if (richTextBox1.TextLength == 0)
+            {
+                MessageBox.Show("Please type some text to convert and try again");
+                return;
+            }
             button1.Enabled = false;
             try
             {
@@ -73,22 +85,22 @@ namespace MS_Paint_Code_Writter
                 ShowWindow(p.MainWindowHandle, SW_SHOWMAXIMIZED);
                 Thread.Sleep(1000); panel1.Focus();
 
-
-                zoomBtn = new MyCursor("move mouse to zoom icon and press enter", "ZoomButton");
-                ClickLeft(zoomBtn.X, zoomBtn.Y, 12);
-                penBtn = new MyCursor("move mouse to pen icon and press enter", "PenButton");
-                ClickLeft(penBtn.X, penBtn.Y);
-                colorPaleteBtn = new MyCursor("move mouse to custom color palete icon and press enter", "ColorPicker");
-                ClickLeft(colorPaleteBtn.X, colorPaleteBtn.Y, 3);
-                RText = new MyCursor("move mouse to red color input box and press enter", "Red color");
-                GText = new MyCursor("move mouse to green color input box and press enter", "Green color");
-                BText = new MyCursor("move mouse to blue color input box and press enter", "Blue color");
-
-
-
-
+                if (loadedConfig == false)
+                {
+                    CurrentConfig.zoomBtn = new MyCursor("move mouse to zoom icon and press enter", "ZoomButton");
+                    ClickLeft(CurrentConfig.zoomBtn.X, CurrentConfig.zoomBtn.Y, 12);
+                    CurrentConfig.penBtn = new MyCursor("move mouse to pen icon and press enter", "PenButton");
+                    ClickLeft(CurrentConfig.penBtn.X, CurrentConfig.penBtn.Y);
+                    CurrentConfig.colorPaleteBtn = new MyCursor("move mouse to custom color palete icon and press enter", "ColorPicker");
+                    ClickLeft(CurrentConfig.colorPaleteBtn.X, CurrentConfig.colorPaleteBtn.Y, 3);
+                    CurrentConfig.RText = new MyCursor("move mouse to red color input box and press enter", "Red color");
+                    CurrentConfig.GText = new MyCursor("move mouse to green color input box and press enter", "Green color");
+                    CurrentConfig.BText = new MyCursor("move mouse to blue color input box and press enter", "Blue color");
+                    CurrentConfig.colorPaleteOKBtn = new MyCursor("move mouse to Ok icon and press enter", "OkButon");
+                    ClickLeft(CurrentConfig.colorPaleteBtn.X, CurrentConfig.colorPaleteBtn.Y);
+                }
+                SetForegroundWindow(p.MainWindowHandle);
             }
-
             catch (Exception ex)
             {
                 MessageBox.Show(ex.Message);
@@ -106,18 +118,39 @@ namespace MS_Paint_Code_Writter
         private void button3_Click(object sender, EventArgs e)
         {
             Directory.CreateDirectory(_confdir);
+
+            JsonSerializer serializer = new JsonSerializer();
+            serializer.NullValueHandling = NullValueHandling.Ignore;
+
+            using (StreamWriter sw = new StreamWriter(_savedConf))
+            using (JsonWriter writer = new JsonTextWriter(sw))
+            {
+                serializer.Serialize(writer, CurrentConfig);
+            }
         }
 
         private void button2_Click(object sender, EventArgs e)
         {
             Directory.CreateDirectory(_confdir);
-            File.Exists()
+            if (File.Exists(_savedConf))
+            {
+                using (StreamReader streamReader = new StreamReader(_savedConf))
+                {
+                    string json = streamReader.ReadToEnd();
+                    CurrentConfig = JsonConvert.DeserializeObject<MyConfig>(json);
+                    loadedConfig = true;
+                }
+            }
         }
     }
     public class MyCursor
     {
         public uint X { get; }
         public uint Y { get; }
+        public MyCursor()
+        {
+            //for serializatio puproses only
+        }
         public MyCursor(string message, string log)
         {
             new MyPopUp(message).ShowDialog();
@@ -125,9 +158,18 @@ namespace MS_Paint_Code_Writter
             Y = (uint)Cursor.Position.Y;
             if (string.IsNullOrEmpty(log) == false)
             {
-                Console.WriteLine($"{(log).PadLeft(20)} = X: {X}, Y:{Y}");
+                Console.WriteLine($"{log.PadLeft(20)} = X: {X}, Y:{Y}");
             }
         }
-
+    }
+    public class MyConfig
+    {
+        public MyCursor zoomBtn { get; set; }
+        public MyCursor penBtn { get; set; }
+        public MyCursor colorPaleteBtn { get; set; }
+        public MyCursor RText { get; set; }
+        public MyCursor GText { get; set; }
+        public MyCursor BText { get; set; }
+        public MyCursor colorPaleteOKBtn { get; set; }
     }
 }
