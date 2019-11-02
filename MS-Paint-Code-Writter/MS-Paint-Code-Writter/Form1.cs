@@ -59,7 +59,13 @@ namespace MS_Paint_Code_Writter
                 ShowWindow(p.MainWindowHandle, SW_SHOWMAXIMIZED);
                 Thread.Sleep(1000);
                 panel1.Focus();
-                GetPosition();
+
+                //Click on zoom
+                MessageBox.Show("move mouse to zoom icon and press enter");
+                MyCursor zoomBtn = new MyCursor((uint)Cursor.Position.X, (uint)Cursor.Position.Y);
+                
+
+
             }
 
             catch (Exception ex)
@@ -74,6 +80,16 @@ namespace MS_Paint_Code_Writter
             uint X = (uint)coordinates.X;
             uint Y = (uint)coordinates.Y;
             Console.WriteLine($"X: {X}, Y:{Y}");
+        }
+    }
+    public class MyCursor
+    {
+        public uint X { get; }
+        public uint Y { get; }
+        public MyCursor(uint x, uint y)
+        {
+            X = x;
+            Y = y;
         }
     }
 }
