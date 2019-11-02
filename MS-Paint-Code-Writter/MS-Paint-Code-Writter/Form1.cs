@@ -4,6 +4,7 @@ using System.ComponentModel;
 using System.Data;
 using System.Diagnostics;
 using System.Drawing;
+using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -16,7 +17,9 @@ namespace MS_Paint_Code_Writter
     public partial class Form1 : Form
     {
 
-
+        private static readonly string _workdir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "MSPaintCodeWritter");
+        private static readonly string _confdir = Path.Combine(_workdir, "config");
+        private static readonly string _savedConfdir = Path.Combine(_confdir, "configuration.txt");
         private MyCursor zoomBtn { get; set; }
         private MyCursor penBtn { get; set; }
         private MyCursor colorPaleteBtn { get; set; }
@@ -102,7 +105,13 @@ namespace MS_Paint_Code_Writter
 
         private void button3_Click(object sender, EventArgs e)
         {
+            Directory.CreateDirectory(_confdir);
+        }
 
+        private void button2_Click(object sender, EventArgs e)
+        {
+            Directory.CreateDirectory(_confdir);
+            File.Exists()
         }
     }
     public class MyCursor
