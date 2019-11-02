@@ -15,13 +15,18 @@ namespace MS_Paint_Code_Writter
 {
     public partial class Form1 : Form
     {
+
+
+        private MyCursor zoomBtn { get; set; }
+        private MyCursor penBtn { get; set; }
+        private MyCursor colorPaleteBtn { get; set; }
+        private MyCursor RText { get; set; }
+        private MyCursor GText { get; set; }
+        private MyCursor BText { get; set; }
+
         public Form1()
         {
             InitializeComponent();
-            this.Location = new Point(Screen.PrimaryScreen.Bounds.X, //should be (0,0)
-                             Screen.PrimaryScreen.Bounds.Y);
-            this.TopMost = true;
-            this.StartPosition = FormStartPosition.Manual;
         }
 
         // Pinvoke declaration for ShowWindow
@@ -39,16 +44,22 @@ namespace MS_Paint_Code_Writter
         [DllImport("user32.dll", CharSet = CharSet.Auto, CallingConvention = CallingConvention.StdCall)]
         public static extern void mouse_event(uint dwFlags, uint dx, uint dy, uint cButtons, uint dwExtraInfo);
 
-        public void GetPosition()
+        public void ClickLeft(uint x, uint y)
         {
-            uint X = (uint)Cursor.Position.X;
-            uint Y = (uint)Cursor.Position.Y;
-            Console.WriteLine($"X: {X}, Y:{Y}");
-            mouse_event(MOUSEEVENTF_LEFTDOWN | MOUSEEVENTF_LEFTUP, X, Y, 0, 0);
+            mouse_event(MOUSEEVENTF_LEFTDOWN | MOUSEEVENTF_LEFTUP, x, y, 0, 0);
+        }
+        public void ClickLeft(uint x, uint y, int times, int sleep = 70)
+        {
+            for (int i = 0; i < times; i++)
+            {
+                mouse_event(MOUSEEVENTF_LEFTDOWN | MOUSEEVENTF_LEFTUP, x, y, 0, 0);
+                Thread.Sleep(sleep);
+            }
         }
 
         private void button1_Click(object sender, EventArgs e)
         {
+            button1.Enabled = false;
             try
             {
                 Process p = Process.Start("mspaint.exe");
@@ -57,12 +68,19 @@ namespace MS_Paint_Code_Writter
 
                 SetParent(p.MainWindowHandle, panel1.Handle);
                 ShowWindow(p.MainWindowHandle, SW_SHOWMAXIMIZED);
-                Thread.Sleep(1000);
-                panel1.Focus();
+                Thread.Sleep(1000); panel1.Focus();
 
-                //Click on zoom
-                MyCursor zoomBtn = new MyCursor("move mouse to zoom icon and press enter");
-                Console.WriteLine($"ZoomBtn = X: {zoomBtn.X}, Y:{zoomBtn.Y}");
+
+                zoomBtn = new MyCursor("move mouse to zoom icon and press enter", "ZoomButton");
+                ClickLeft(zoomBtn.X, zoomBtn.Y, 12);
+                penBtn = new MyCursor("move mouse to pen icon and press enter", "PenButton");
+                ClickLeft(penBtn.X, penBtn.Y);
+                colorPaleteBtn = new MyCursor("move mouse to custom color palete icon and press enter", "ColorPicker");
+                ClickLeft(colorPaleteBtn.X, colorPaleteBtn.Y, 3);
+                RText = new MyCursor("move mouse to red color input box and press enter", "Red color");
+                GText = new MyCursor("move mouse to green color input box and press enter", "Green color");
+                BText = new MyCursor("move mouse to blue color input box and press enter", "Blue color");
+
 
 
 
@@ -81,17 +99,26 @@ namespace MS_Paint_Code_Writter
             uint Y = (uint)coordinates.Y;
             Console.WriteLine($"X: {X}, Y:{Y}");
         }
+
+        private void button3_Click(object sender, EventArgs e)
+        {
+
+        }
     }
     public class MyCursor
     {
         public uint X { get; }
         public uint Y { get; }
-        public MyCursor(string message)
+        public MyCursor(string message, string log)
         {
-            MessageBox.Show(message);
+            new MyPopUp(message).ShowDialog();
             X = (uint)Cursor.Position.X;
             Y = (uint)Cursor.Position.Y;
+            if (string.IsNullOrEmpty(log) == false)
+            {
+                Console.WriteLine($"{(log).PadLeft(20)} = X: {X}, Y:{Y}");
+            }
         }
-      
+
     }
 }
